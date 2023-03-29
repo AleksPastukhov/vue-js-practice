@@ -5,7 +5,7 @@
   "homepage": "https://AleksPastukhov/vue-js-practice/",
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vue-cli-service build",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "lint:js": "eslint src/**/*.{js,jsx}",
