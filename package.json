@@ -2,7 +2,6 @@
   "name": "vue-js-practice",
   "version": "0.0.0",
   "private": true,
-  "homepage": "https://AleksPastukhov/vue-js-practice/",
   "scripts": {
     "start": "vite",
     "build": "vite build",
