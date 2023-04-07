@@ -29,7 +29,7 @@ jobs:
           folder: dist
 
       - name: Set deployment URL output
-        run: echo ::set-output name=deployment_url::https://<your-github-username>.github.io/<your-repository-name>/
+        run: echo ::set-output name=deployment_url::https://alekspastukhov.github.io/vue-js-practice/
         env:
           GITHUB_USERNAME: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
