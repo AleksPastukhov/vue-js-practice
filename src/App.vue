@@ -1,14 +1,19 @@
 <template>
-  <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4"></div>
+  <div
+    class="container mx-auto flex flex-col items-center bg-gray-100 p-4"
+  ></div>
   <div class="container">
     <section>
       <div class="flex">
         <div class="max-w-xs">
-          <label for="wallet" class="block text-sm font-medium text-gray-700">Тикер</label>
+          <label for="wallet" class="block text-sm font-medium text-gray-700"
+            >Тикер</label
+          >
           <div class="mt-1 relative rounded-md shadow-md">
             <input
               v-model="ticker"
               @keydown.enter="add"
+              @input="coinFilter($event)"
               type="text"
               name="wallet"
               id="wallet"
@@ -16,13 +21,16 @@
               placeholder="Например DOGE"
             />
           </div>
-          <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
+          <div
+            class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
+          >
             <span
-              v-for="t in tickers"
-              :key="t.name"
+              v-for="t in searchResult"
+              :key="t"
+              @click="addTickerFromSearch(t)"
               class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
             >
-              {{ t.name }}
+              {{ t }}
             </span>
           </div>
           <template v-if="addMessage">
@@ -59,13 +67,17 @@
         :key="t.name"
         @click="select(t)"
         :class="{
-          'border-4': sel === t
+          'border-4': sel === t,
         }"
         class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
       >
         <div class="px-4 py-5 sm:p-6 text-center">
-          <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
-          <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ t.price }}</dd>
+          <dt class="text-sm font-medium text-gray-500 truncate">
+            {{ t.name }} - USD
+          </dt>
+          <dd class="mt-1 text-3xl font-semibold text-gray-900">
+            {{ t.price }}
+          </dd>
         </div>
         <div class="w-full border-t border-gray-200"></div>
         <button
@@ -90,7 +102,9 @@
     </dl>
     <hr class="w-full border-t border-gray-600 my-4" />
     <section v-if="sel" class="relative">
-      <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ sel.name }} - USD</h3>
+      <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
+        {{ sel.name }} - USD
+      </h3>
       <div class="flex items-end border-gray-600 border-b border-l h-64">
         <div
           v-for="(bar, idx) in normalizeGraph()"
@@ -127,6 +141,8 @@
 </template>
 
 <script>
+import { isArray } from '@vue/shared';
+
 export default {
   name: 'App',
 
@@ -136,60 +152,101 @@ export default {
       tickers: [],
       addMessage: false,
       sel: null,
-      graph: []
-    }
+      graph: [],
+      allCoins: {},
+      searchResult: [],
+    };
   },
+
+  mounted: async function () {
+    const coinList = await fetch(
+      `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`
+    );
+    const data = await coinList.json();
+    this.allCoins = data.Data;
+  },
+
   methods: {
+    addTickerFromSearch(tickerName) {
+      this.ticker = tickerName;
+      this.add();
+    },
     add() {
       if (this.ticker.trim() === '') {
-        return
+        return;
       }
-      if (!this.tickers.some((t) => t.name === this.ticker)) {
-        this.addMessage = false
+      if (
+        !this.tickers.some(
+          t => t.name.toUpperCase() === this.ticker.toUpperCase()
+        )
+      ) {
+        this.addMessage = false;
         const currentTicker = {
-          name: this.ticker,
-          price: '-'
-        }
+          name: this.ticker.toUpperCase(),
+          price: '-',
+        };
 
-        this.tickers.push(currentTicker)
+        this.tickers.push(currentTicker);
         setInterval(async () => {
           const f = await fetch(
             `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=099d386de2c341c4dbe9651ca196e153e45bf1a2ea8e5b25c9cfd6d4e2a5c0ce`
-          )
-          const data = await f.json()
+          );
+          const data = await f.json();
 
-          this.tickers.find((t) => t.name === currentTicker.name).price =
-            data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+          this.tickers.find(t => t.name === currentTicker.name).price =
+            data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
           if (this.sel?.name === currentTicker.name) {
-            this.graph.push(data.USD)
+            this.graph.push(data.USD);
           }
-        }, 5000)
+        }, 5000);
 
-        this.ticker = ''
-        return
+        this.searchResult = this.searchResult.filter(
+          t => t !== this.ticker.toUpperCase()
+        );
+        this.ticker = '';
+        return;
       }
-      this.ticker = ''
-      this.addMessage = true
+      this.ticker = '';
+      this.addMessage = true;
       setTimeout(() => {
-        this.addMessage = false
-      }, 1500)
+        this.addMessage = false;
+      }, 1500);
     },
     removeTicker(ticker) {
       if (this.sel === ticker) {
-        this.sel = null
+        this.sel = null;
       }
-      this.tickers = this.tickers.filter((t) => t !== ticker)
+      this.tickers = this.tickers.filter(t => t !== ticker);
     },
     normalizeGraph() {
-      const maxValue = Math.max(...this.graph)
-      const minValue = Math.min(...this.graph)
-      return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue))
+      const maxValue = Math.max(...this.graph);
+      const minValue = Math.min(...this.graph);
+      return this.graph.map(
+        price => 5 + ((price - minValue) * 95) / (maxValue - minValue)
+      );
     },
     select(ticker) {
-      this.sel = ticker
-      this.graph = []
-    }
-  }
-}
+      this.sel = ticker;
+      this.graph = [];
+    },
+    coinFilter(evt) {
+      const searchQuery = evt.target.value.trim();
+      const result = Object.keys(this.allCoins)
+        .filter(key => {
+          if (key.includes(searchQuery.trim().toUpperCase())) {
+            return key;
+          }
+        })
+        .filter(t => !this.tickers.map(t => t.name).includes(t));
+
+      if (result.length > 4) {
+        result.length = 4;
+        this.searchResult = result;
+      } else {
+        this.searchResult = result;
+      }
+    },
+  },
+};
 </script>
